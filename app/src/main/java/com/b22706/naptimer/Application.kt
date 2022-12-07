@@ -8,6 +8,6 @@ class Application: Application() {
 
     override fun onCreate() {
         super.onCreate()
-        notificationMiniLayout = RemoteViews(packageName, R.layout.space_layout)
+        notificationMiniLayout = RemoteViews(packageName, R.layout.notification_mini_layout)
     }
 }

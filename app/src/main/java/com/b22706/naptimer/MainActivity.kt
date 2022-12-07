@@ -142,7 +142,7 @@ class MainActivity :
         }
 
         binding.button2.setOnClickListener {
-            mService.testUi()
+            mService.notificationUiChange()
         }
     }
 

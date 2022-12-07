@@ -6,31 +6,65 @@
     android:layout_height="match_parent">
 
     <TextView
-        android:id="@+id/titleText"
-        style="@style/TextAppearance.Compat.Notification.Title"
+        android:id="@+id/muniteView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
         android:layout_marginStart="0dp"
-        android:text="Title"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:layout_marginTop="0dp"
+        android:text="15"
+        android:textSize="30sp" />
 
     <TextView
-        android:id="@+id/contentText"
+        android:id="@+id/textView2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/titleText"
-        android:text="content"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/titleText" />
+        android:layout_alignParentTop="true"
+        android:layout_marginTop="0dp"
+        android:layout_toEndOf="@+id/muniteView"
+        android:text=" : "
+        android:textSize="30sp" />
+
+    <TextView
+        android:id="@+id/secondView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_toEndOf="@+id/textView2"
+        android:text="00"
+        android:textSize="30sp" />
 
     <Button
-        android:id="@+id/button"
+        android:id="@+id/timerButton"
+        android:layout_width="wrap_content"
+        android:layout_height="48dp"
+        android:layout_alignParentStart="true"
+        android:layout_below="@+id/textView2"
+        android:layout_marginStart="0dp"
+        android:layout_marginTop="2dp"
+        android:text="start"
+        android:textSize="11sp" />
+
+    <Button
+        android:id="@+id/stopServiceButton"
+        android:layout_width="wrap_content"
+        android:layout_height="48dp"
+        android:layout_alignParentStart="true"
+        android:layout_below="@+id/timerButton"
+        android:layout_marginTop="10dp"
+        android:text="service Stop"
+        android:textSize="11sp" />
+
+    <Button
+        android:id="@+id/changeTimeButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/contentText"
-        android:text="Button"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/contentText" />
+        android:layout_alignBottom="@+id/timerButton"
+        android:layout_alignTop="@+id/timerButton"
+        android:layout_marginBottom="0dp"
+        android:layout_marginStart="10dp"
+        android:layout_marginTop="0dp"
+        android:layout_toEndOf="@+id/timerButton"
+        android:text="change time"
+        android:textSize="11sp" />
 </RelativeLayout>
