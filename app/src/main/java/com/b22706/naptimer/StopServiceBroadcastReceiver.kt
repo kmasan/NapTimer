@@ -13,12 +13,12 @@ class StopServiceBroadcastReceiver: BroadcastReceiver() {
     }
 }
 
-class StartTimerBroadcastReceiver : BroadcastReceiver(){
+class TimerBroadcastReceiver : BroadcastReceiver(){
     override fun onReceive(context: Context, intent: Intent) {
-        Log.d("StartTimerBroadcastReceiver","onReceive")
+        Log.d("TimerBroadcastReceiver","onReceive")
         val targetIntent = Intent(context, TimerService::class.java).apply {
             action = Intent.ACTION_SEND
-            putExtra("tag", "start")
+            putExtra("tag", "timer")
             type = "text/plain"
         }
         context.startForegroundService(targetIntent)
@@ -49,9 +49,9 @@ class ResetTimerBroadcastReceiver: BroadcastReceiver(){
     }
 }
 
-class ChangeTimerBroadcastReceiver: BroadcastReceiver(){
+class ChangeTimeBroadcastReceiver: BroadcastReceiver(){
     override fun onReceive(context: Context, intent: Intent) {
-        Log.d("ChangeTimerBroadcastReceiver","onReceive")
+        Log.d("ChangeTimeBroadcastReceiver","onReceive")
         val targetIntent = Intent(context, TimerService::class.java).apply {
             action = Intent.ACTION_SEND
             putExtra("tag", "change")

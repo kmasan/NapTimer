@@ -5,23 +5,26 @@ import androidx.lifecycle.MutableLiveData
 
 class MyTimer(val listener: TimerListener, val tag: String) {
     private lateinit var timer: CountDownTimer
-    val progressTime = MutableLiveData(15 * 60000L)
+    private var timerRunning = false
+    fun getTimerRunning() = timerRunning
 
     var timerMinute = 15
     var timerSecond = 0
-    var timerRunning = false
+    var progressTime = (timerMinute*60+timerSecond)*1000L
+    val progressTimeL = MutableLiveData((timerMinute*60+timerSecond)*1000L)
 
     fun start(){
         if(timerRunning) return
-        timer = object : CountDownTimer((timerMinute*60+timerSecond)*1000L, 1000){
+        timer = object : CountDownTimer(progressTime, 1000){
             override fun onTick(time: Long) {
-                progressTime.postValue(time)
+                progressTime = time
+                progressTimeL.postValue(time)
                 listener.onTimerTick(time, tag)
             }
 
             override fun onFinish() {
                 listener.onTimerFinish(tag)
-                timerRunning = false
+                //timerRunning = false
             }
         }.start()
         timerRunning = true
@@ -38,7 +41,15 @@ class MyTimer(val listener: TimerListener, val tag: String) {
             timer.cancel()
             timerRunning = false
         }
-        progressTime.postValue(timerMinute*60000L)
+        progressTime = (timerMinute*60+timerSecond)*1000L
+        progressTimeL.postValue((timerMinute*60+timerSecond)*1000L)
+    }
+
+    fun change(min: Int, sec:Int){
+        timerMinute = min
+        timerSecond = sec
+        progressTime = (timerMinute*60+timerSecond)*1000L
+        progressTimeL.postValue((timerMinute*60+timerSecond)*1000L)
     }
 
     interface TimerListener{

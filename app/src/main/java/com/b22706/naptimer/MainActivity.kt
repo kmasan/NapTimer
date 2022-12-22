@@ -49,10 +49,10 @@ class MainActivity :
                 startButtonText.observe(this@MainActivity){
                     binding.startButton.text = it
                 }
-                mainTimer.progressTime.observe(this@MainActivity){
+                mainTimer.progressTimeL.observe(this@MainActivity){
                     changeTimerText(it)
                 }
-                subTimer.progressTime.observe(this@MainActivity){
+                subTimer.progressTimeL.observe(this@MainActivity){
 
                 }
             }
@@ -98,11 +98,11 @@ class MainActivity :
 
         binding.startButton.setOnClickListener {
             when {
-                mainTimer.timerRunning -> {
+                mainTimer.getTimerRunning() -> {
                     mainTimer.stop()
                     binding.startButton.text = "再開"
                 }
-                subTimer.timerRunning -> {
+                subTimer.getTimerRunning() -> {
                     mediaPlayer.stop()
                     mediaPlayer.prepare()
                     subTimer.reset()
@@ -142,7 +142,7 @@ class MainActivity :
         }
 
         binding.button2.setOnClickListener {
-            mService.notificationUiChange()
+            //mService.notificationUiChange()
         }
     }
 

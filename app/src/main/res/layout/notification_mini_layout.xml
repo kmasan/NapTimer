@@ -40,12 +40,12 @@
         android:textSize="11sp" />
 
     <Button
-        android:id="@+id/changeTimeButtonM"
+        android:id="@+id/resetButtonM"
         android:layout_width="wrap_content"
         android:layout_height="40dp"
         android:layout_marginStart="10dp"
         android:layout_toEndOf="@+id/timerButtonM"
-        android:text="change time"
+        android:text="reset"
         android:textSize="11sp" />
 
 </RelativeLayout>

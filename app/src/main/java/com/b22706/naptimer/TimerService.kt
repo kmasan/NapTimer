@@ -4,10 +4,7 @@ import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.PendingIntent
 import android.app.Service
-import android.content.BroadcastReceiver
-import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.media.MediaPlayer
 import android.os.Binder
 import android.os.IBinder
@@ -24,19 +21,14 @@ class TimerService: Service(), MyTimer.TimerListener {
     val startButtonText = MutableLiveData("スタート")
     var audioFile: File? = null
     var mediaPlayer = MediaPlayer()
-    var mainTimerRunning = true
+    var timerRunning = false
 
     lateinit var stopServicePendingIntent: PendingIntent
-    lateinit var startTimerPendingIntent: PendingIntent
-    lateinit var stopTimerPendingIntent: PendingIntent
+    lateinit var timerPendingIntent: PendingIntent
     lateinit var resetTimerPendingIntent: PendingIntent
-
-    private val buttonBr = object :BroadcastReceiver(){
-        override fun onReceive(context: Context, intent: Intent) {
-            Log.d("service","onReceive")
-
-        }
-    }
+    lateinit var changeTimePendingIntent: PendingIntent
+    var mainTimerMinute = 15
+    var mainTimerSecond = 0
 
     private val binder = ServiceBinder()
     inner class ServiceBinder : Binder(){
@@ -60,7 +52,7 @@ class TimerService: Service(), MyTimer.TimerListener {
             Intent.ACTION_SEND -> {
                 if(intent.type == "text/plain"){
                     when(intent.getStringExtra("tag")){
-                        "start" ->{
+                        "timer" ->{
                             timerStart()
                             Log.i("service", "tag:start")
                         }
@@ -76,21 +68,7 @@ class TimerService: Service(), MyTimer.TimerListener {
             }
             else -> {
                 startServiceSetting(intent)
-
-                mainTimer = MyTimer(this, "main")
-                subTimer = MyTimer(this, "sub")
-                subTimer.timerMinute = 1
-                subTimer.timerSecond = 0
-
-                mediaPlayer.setOnCompletionListener {
-                    if(!mediaPlayer.isLooping){
-                        mediaPlayer.stop()
-                        mediaPlayer.prepare()
-                    }
-                }
-
-                val filter = IntentFilter(Intent.ACTION_ASSIST)
-                registerReceiver(buttonBr, filter)
+                startTimerSetting()
             }
         }
         return START_NOT_STICKY
@@ -114,11 +92,6 @@ class TimerService: Service(), MyTimer.TimerListener {
         return super.onUnbind(intent)
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        unregisterReceiver(buttonBr)
-    }
-
     // フォラグランドサービスの開始
     @SuppressLint("RemoteViewLayout")
     private fun startServiceSetting(intent: Intent) {
@@ -140,13 +113,8 @@ class TimerService: Service(), MyTimer.TimerListener {
             PendingIntent.FLAG_IMMUTABLE
         )
 
-        startTimerPendingIntent = PendingIntent.getBroadcast(this, 1,
-            Intent(this, StartTimerBroadcastReceiver::class.java).apply {
-                action = Intent.ACTION_SEND
-            }, PendingIntent.FLAG_IMMUTABLE)
-
-        stopTimerPendingIntent = PendingIntent.getBroadcast(this, 1,
-            Intent(this, StopTimerBroadcastReceiver::class.java).apply {
+        timerPendingIntent = PendingIntent.getBroadcast(this, 1,
+            Intent(this, TimerBroadcastReceiver::class.java).apply {
                 action = Intent.ACTION_SEND
             }, PendingIntent.FLAG_IMMUTABLE)
 
@@ -155,45 +123,50 @@ class TimerService: Service(), MyTimer.TimerListener {
                 action = Intent.ACTION_SEND
             }, PendingIntent.FLAG_IMMUTABLE)
 
+        changeTimePendingIntent = PendingIntent.getBroadcast(this, 3,
+            Intent(this, ChangeTimeBroadcastReceiver::class.java).apply {
+                action = Intent.ACTION_SEND
+            }, PendingIntent.FLAG_IMMUTABLE)
+
         // startForegroundServiceでサービス起動から5秒以内にstartForegroundして通知を表示しないとANRエラーになる
         val notification: Notification = ForegroundServiceNotification.createServiceNotification(
             applicationContext, pendingIntent, stopServicePendingIntent, "alarm"
         )
 
-        val notificationLayout = RemoteViews(packageName, R.layout.notification_layout).apply {
-            setTextViewText(R.id.muniteView,"11")
-            setOnClickPendingIntent(R.id.timerButton, startTimerPendingIntent)
-            setOnClickPendingIntent(R.id.stopServiceButton, stopServicePendingIntent)
-        }
-        val notificationMiniLayout = RemoteViews(packageName, R.layout.notification_mini_layout).apply {
-            setTextViewText(R.id.muniteViewM,"11")
-            setOnClickPendingIntent(R.id.timerButtonM, startTimerPendingIntent)
-        }
-        val customNotification = ForegroundServiceNotification.createCustomNotification(
-            applicationContext, notificationMiniLayout, notificationLayout
-        )
-
-        //Serviceの起動
-        startForeground(
-            ForegroundServiceNotification.FOREGROUND_SERVICE_NOTIFICATION_ID,
-            customNotification
-        )
+        notificationUiChange(15,0, "start")
     }
 
-    fun notificationUiChange(){
-        Log.i("service", "notificationUiChange")
+    private fun startTimerSetting(){
+        mainTimer = MyTimer(this, "main")
+        subTimer = MyTimer(this, "sub")
+        subTimer.change(1,0)
+
+        mediaPlayer.setOnCompletionListener {
+            if(!mediaPlayer.isLooping){
+                mediaPlayer.stop()
+                mediaPlayer.prepare()
+            }
+        }
+    }
+
+    fun notificationUiChange(minute: Int, second: Int, timer: String){
+        //Log.i("service", "notificationUiChange")
+
         val notificationLayout = RemoteViews(packageName, R.layout.notification_layout).apply {
-            setTextViewText(R.id.muniteView,"11")
-            setTextViewText(R.id.secondView,"00")
-            setTextViewText(R.id.timerButton,"start")
-            setOnClickPendingIntent(R.id.timerButton, startTimerPendingIntent)
+            setTextViewText(R.id.muniteView,String.format("%02d", minute))
+            setTextViewText(R.id.secondView,String.format("%02d", second))
+            setTextViewText(R.id.timerButton,timer)
+            setOnClickPendingIntent(R.id.timerButton, timerPendingIntent)
+            setOnClickPendingIntent(R.id.resetButton, resetTimerPendingIntent)
+            setOnClickPendingIntent(R.id.timeChangeButton, changeTimePendingIntent)
             setOnClickPendingIntent(R.id.stopServiceButton, stopServicePendingIntent)
         }
         val notificationMiniLayout = RemoteViews(packageName, R.layout.notification_mini_layout).apply {
-            setTextViewText(R.id.muniteViewM,"11")
-            setTextViewText(R.id.secondViewM,"00")
-            setTextViewText(R.id.timerButtonM,"start")
-            setOnClickPendingIntent(R.id.timerButtonM, startTimerPendingIntent)
+            setTextViewText(R.id.muniteViewM,String.format("%02d", minute))
+            setTextViewText(R.id.secondViewM,String.format("%02d", second))
+            setTextViewText(R.id.timerButtonM,timer)
+            setOnClickPendingIntent(R.id.timerButtonM, timerPendingIntent)
+            setOnClickPendingIntent(R.id.resetButtonM, resetTimerPendingIntent)
         }
         val customNotification = ForegroundServiceNotification.createCustomNotification(
             applicationContext, notificationMiniLayout, notificationLayout
@@ -206,7 +179,7 @@ class TimerService: Service(), MyTimer.TimerListener {
     }
 
     override fun onTimerTick(time: Long, tag: String) {
-        Log.i("service", "onTimerTick:${time}-${tag}")
+        //Log.i("service", "onTimerTick:${time}-${tag}")
         when(tag){
             "main" -> {
                 changeTimerView(time)
@@ -215,47 +188,27 @@ class TimerService: Service(), MyTimer.TimerListener {
     }
 
     private fun changeTimerView(time: Long){
-        val minute = (time/(60*1000)).toInt()
-        val second = ((time/1000)%60).toInt()
+        mainTimerMinute = (time/(60*1000)).toInt()
+        mainTimerSecond = ((time/1000)%60).toInt()
 
-        val notificationLayout = RemoteViews(packageName, R.layout.notification_layout).apply {
-            setTextViewText(R.id.muniteView,String.format("%02d", minute))
-            setTextViewText(R.id.secondView,String.format("%02d", second))
-            setTextViewText(R.id.timerButton,"stop")
-            setOnClickPendingIntent(R.id.timerButton, stopTimerPendingIntent)
-            setOnClickPendingIntent(R.id.stopServiceButton, stopServicePendingIntent)
-        }
-        val notificationMiniLayout = RemoteViews(packageName, R.layout.notification_mini_layout).apply {
-            setTextViewText(R.id.muniteViewM,String.format("%02d", minute))
-            setTextViewText(R.id.secondViewM,String.format("%02d", second))
-            setTextViewText(R.id.timerButtonM,"stop")
-            setOnClickPendingIntent(R.id.timerButtonM, stopTimerPendingIntent)
-        }
-        val customNotification = ForegroundServiceNotification.createCustomNotification(
-            applicationContext, notificationMiniLayout, notificationLayout
-        )
-
-        startForeground(
-            ForegroundServiceNotification.FOREGROUND_SERVICE_NOTIFICATION_ID,
-            customNotification
-        )
+        notificationUiChange(mainTimerMinute, mainTimerSecond, "stop")
     }
 
     override fun onTimerFinish(tag: String) {
         Log.i("service", "onTimerFinish")
         when(tag){
             "main" -> {
-                mainTimerRunning = false
-                mediaPlayer.start()
+                timerRunning = false
+                //mediaPlayer.start()
                 mainTimer.reset()
                 subTimer.start()
                 app.notificationMiniLayout.setTextViewText(R.id.timerButtonM,"アラーム停止")
                 //startButtonText.postValue("アラーム停止")
             }
             "sub" -> {
-                mainTimerRunning = true
-                mediaPlayer.stop()
-                mediaPlayer.prepare()
+                timerRunning = true
+                //mediaPlayer.stop()
+                //mediaPlayer.prepare()
                 subTimer.reset()
                 mainTimer.start()
                 app.notificationMiniLayout.setTextViewText(R.id.timerButtonM,"一時停止")
@@ -266,26 +219,32 @@ class TimerService: Service(), MyTimer.TimerListener {
 
     fun timerStart(){
         when {
-            mainTimer.timerRunning -> {
-                mainTimer.stop()
-                app.notificationMiniLayout.setTextViewText(R.id.timerButtonM, "再開")
-                //startButtonText.postValue("再開")
-            }
-            subTimer.timerRunning -> {
-                mediaPlayer.stop()
-                mediaPlayer.prepare()
-                subTimer.reset()
+            !timerRunning -> {
+                Log.i("service", "timerStart-timerRunning")
                 mainTimer.start()
-                mainTimerRunning = true
-                app.notificationMiniLayout.setTextViewText(R.id.timerButtonM, "一時停止")
+                app.notificationMiniLayout.setTextViewText(R.id.timerButtonM, "stop")
+                timerRunning = true
                 //startButtonText.postValue("一時停止")
             }
-            else -> {
-                if(mainTimerRunning){
-                    mainTimer.start()
-                    app.notificationMiniLayout.setTextViewText(R.id.timerButtonM, "一時停止")
-                    //startButtonText.postValue("一時停止")
-                }
+            subTimer.getTimerRunning() -> {
+                Log.i("service", "timerStart-subTimer")
+                //mediaPlayer.stop()
+                //mediaPlayer.prepare()
+                subTimer.reset()
+                mainTimer.reset()
+                mainTimer.start()
+                timerRunning = true
+                notificationUiChange(mainTimerMinute, mainTimerSecond, "restart")
+                app.notificationMiniLayout.setTextViewText(R.id.timerButtonM, "restart")
+                //startButtonText.postValue("一時停止")
+            }
+            mainTimer.getTimerRunning() -> {
+                Log.i("service", "timerStart-mainTimer")
+                mainTimer.stop()
+                timerRunning = false
+                notificationUiChange(mainTimerMinute, mainTimerSecond, "start")
+                app.notificationMiniLayout.setTextViewText(R.id.timerButtonM, "start")
+                //startButtonText.postValue("再開")
             }
         }
     }
@@ -293,7 +252,7 @@ class TimerService: Service(), MyTimer.TimerListener {
     fun timerReset() {
         mainTimer.reset()
         subTimer.reset()
-        mainTimerRunning = true
+        timerRunning = true
         changeTimerView(mainTimer.timerMinute * 60 * 1000L)
         app.notificationMiniLayout.setTextViewText(R.id.timerButtonM, "スタート")
         //startButtonText.postValue("スタート")

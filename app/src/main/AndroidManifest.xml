@@ -42,7 +42,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </receiver>
-        <receiver android:name=".StartTimerBroadcastReceiver" android:permission="TODO"
+        <receiver android:name=".TimerBroadcastReceiver" android:permission="TODO"
             android:exported="true">
             <intent-filter>
                 <action android:name="jp.test.tryforegroundservicesample.action.SEND" />

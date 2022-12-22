@@ -46,17 +46,27 @@
         android:textSize="11sp" />
 
     <Button
-        android:id="@+id/stopServiceButton"
+        android:id="@+id/timeChangeButton"
         android:layout_width="wrap_content"
         android:layout_height="48dp"
         android:layout_alignParentStart="true"
         android:layout_below="@+id/timerButton"
         android:layout_marginTop="10dp"
+        android:text="time change"
+        android:textSize="11sp" />
+
+    <Button
+        android:id="@+id/stopServiceButton"
+        android:layout_width="wrap_content"
+        android:layout_height="48dp"
+        android:layout_alignParentStart="true"
+        android:layout_below="@+id/timeChangeButton"
+        android:layout_marginTop="10dp"
         android:text="service Stop"
         android:textSize="11sp" />
 
     <Button
-        android:id="@+id/changeTimeButton"
+        android:id="@+id/resetButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignBottom="@+id/timerButton"
@@ -65,6 +75,6 @@
         android:layout_marginStart="10dp"
         android:layout_marginTop="0dp"
         android:layout_toEndOf="@+id/timerButton"
-        android:text="change time"
+        android:text="reset"
         android:textSize="11sp" />
 </RelativeLayout>
