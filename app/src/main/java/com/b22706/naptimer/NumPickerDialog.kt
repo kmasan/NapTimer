@@ -3,34 +3,40 @@ package com.b22706.naptimer
 import android.app.Dialog
 import android.content.Context
 import android.os.Bundle
-import android.util.Log
 import android.widget.NumberPicker
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.DialogFragment
 
 class NumPickerDialog:DialogFragment(),NumberPicker.OnValueChangeListener {
-    private lateinit var listener: DialogListener
-    private var minuteItem: Int = 0
-    private var secondItem: Int = 0
+    private lateinit var listener: TimerChangeDialogListener
+    private var mainMinuteItem: Int = 0
+    private var mainSecondItem: Int = 0
+    private var subMinuteItem: Int = 0
+    private var subSecondItem: Int = 0
 
     companion object {
-        private const val MINUTE = "minute"
-        private const val SECOND = "second"
+        private const val MAIN_MINUTE = "mainMinute"
+        private const val MAIN_SECOND = "second"
+        private const val SUB_MINUTE = "minute"
+        private const val SUB_SECOND = "second"
         private const val TAG = "tag"
-        fun newInstance(minute: Int, second: Int, tag: String): NumPickerDialog {
+        fun newInstance(mainMinute: Int, mainSecond: Int, subMinute: Int, subSecond: Int): NumPickerDialog {
             val fragment = NumPickerDialog()
             val args = Bundle()
-            args.putInt(MINUTE, minute)
-            args.putInt(SECOND, second)
-            args.putString(TAG, tag)
+            args.putInt(MAIN_MINUTE, mainMinute)
+            args.putInt(MAIN_SECOND, mainSecond)
+            args.putInt(SUB_MINUTE, subMinute)
+            args.putInt(SUB_SECOND, subSecond)
             fragment.arguments = args
             return fragment
         }
     }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        val minute = arguments?.getInt(MINUTE,0)
-        val second = arguments?.getInt(SECOND,10)
+        val mainMinute = arguments?.getInt(MAIN_MINUTE,0)
+        val mainSecond = arguments?.getInt(MAIN_SECOND,10)
+        val subMinute = arguments?.getInt(SUB_MINUTE,0)
+        val subSecond = arguments?.getInt(SUB_SECOND,1)
         val tag = arguments?.getString(TAG,"")
 
         val inflater = activity?.layoutInflater
@@ -40,46 +46,73 @@ class NumPickerDialog:DialogFragment(),NumberPicker.OnValueChangeListener {
             .setTitle("")
             .setPositiveButton("決定") { _, _ ->
                 dismiss()
-                listener.onDialogPositiveClick(this.minuteItem, this.secondItem, tag!!)
+                listener.onDialogPositiveClick(
+                    listOf(this.mainMinuteItem, this.mainSecondItem, this.subMinuteItem, this.subSecondItem),
+                    tag!!
+                )
             }
             .setNegativeButton("キャンセル") { _, _ ->
                 dismiss()
             }
 
-        val npMinute = dialogView?.findViewById(R.id.minutePicker) as NumberPicker
-        npMinute.setOnValueChangedListener(this)
-        npMinute.minValue = 0 // NumberPickerの最小値設定
-        npMinute.maxValue = 60 // NumberPickerの最大値設定
-        npMinute.value = minute!!  // NumberPickerの初期値
-        minuteItem = minute
+        val npMainMinute = dialogView?.findViewById(R.id.mainMinutePicker) as NumberPicker
+        npMainMinute.apply {
+            setOnValueChangedListener(this@NumPickerDialog)
+            minValue = 0 // NumberPickerの最小値設定
+            maxValue = 60 // NumberPickerの最大値設定
+            value = mainMinute!!  // NumberPickerの初期値
+        }
+        mainMinuteItem = mainMinute!!
 
-        val npSecond = dialogView.findViewById(R.id.secondPicker) as NumberPicker
-        npSecond.setOnValueChangedListener(this)
-        npSecond.minValue = 0 // NumberPickerの最小値設定
-        npSecond.maxValue = 59 // NumberPickerの最大値設定
-        npSecond.value = second!!  // NumberPickerの初期値
-        secondItem = second
+        val npMainSecond = dialogView.findViewById(R.id.mainSecondPicker) as NumberPicker
+        npMainSecond.apply {
+            setOnValueChangedListener(this@NumPickerDialog)
+            minValue = 0 // NumberPickerの最小値設定
+            maxValue = 59 // NumberPickerの最大値設定
+            value = mainSecond!!  // NumberPickerの初期値
+        }
+        mainSecondItem = mainSecond!!
+
+        val npSubMinute = dialogView.findViewById(R.id.subMinutePicker) as NumberPicker
+        npSubMinute.apply {
+            setOnValueChangedListener(this@NumPickerDialog)
+            minValue = 0 // NumberPickerの最小値設定
+            maxValue = 60 // NumberPickerの最大値設定
+            value = subMinute!!  // NumberPickerの初期値
+        }
+        mainMinuteItem = subMinute!!
+
+        val npSubSecond = dialogView.findViewById(R.id.subSecondPicker) as NumberPicker
+        npSubSecond.apply {
+            setOnValueChangedListener(this@NumPickerDialog)
+            minValue = 0 // NumberPickerの最小値設定
+            maxValue = 59 // NumberPickerの最大値設定
+            value = subSecond!!  // NumberPickerの初期値
+        }
+        mainSecondItem = subSecond!!
         return dialogBuilder.create()
     }
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
         when{
-            context is DialogListener -> listener = context
-            parentFragment is DialogListener -> listener = parentFragment as DialogListener
+            context is TimerChangeDialogListener -> listener = context
+            parentFragment is TimerChangeDialogListener -> listener = parentFragment as TimerChangeDialogListener
         }
     }
 
     override fun onValueChange(picker: NumberPicker?, oldVal: Int, newVal: Int) {
         when(picker!!.id){
-            R.id.minutePicker -> minuteItem = newVal
-            R.id.secondPicker -> secondItem = newVal
+            R.id.mainMinutePicker -> mainMinuteItem = newVal
+            R.id.mainSecondPicker -> mainSecondItem = newVal
+            R.id.subMinutePicker -> subMinuteItem = newVal
+            R.id.subSecondPicker -> subSecondItem = newVal
         }
         //Log.d("numPicker",newVal.toString())
     }
 
-    interface DialogListener {
-        fun onDialogPositiveClick(minute:Int, second: Int, tag: String)
+    interface TimerChangeDialogListener {
+        fun onDialogPositiveClick(times: List<Int>, tag: String)
         //fun onDialogNegativeClick(dialog: DialogFragment)
     }
 }

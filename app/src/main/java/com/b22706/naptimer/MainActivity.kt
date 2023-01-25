@@ -20,7 +20,7 @@ import java.io.File
 
 class MainActivity :
     AppCompatActivity(),
-    NumPickerDialog.DialogListener,
+    NumPickerDialog.TimerChangeDialogListener,
     FileSelectionDialog.OnFileSelectListener,
     MyTimer.TimerListener
 {
@@ -46,9 +46,6 @@ class MainActivity :
             mBound = true
 
             mService.apply {
-                startButtonText.observe(this@MainActivity){
-                    binding.startButton.text = it
-                }
                 mainTimer.progressTimeL.observe(this@MainActivity){
                     changeTimerText(it)
                 }
@@ -69,15 +66,9 @@ class MainActivity :
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
-        fileSelector = FileSelector(this,this)
-        mainTimer = MyTimer(this, "main")
-        subTimer = MyTimer(this, "sub")
-        volumeControlStream = AudioManager.STREAM_MUSIC
         setContentView(binding.root)
-
-        subTimer.timerMinute = 1
-        subTimer.timerSecond = 0
-        changeTimerText(mainTimer.timerMinute*60*1000L)
+        fileSelector = FileSelector(this,this)
+        timerSetting()
 
         // Serviceの開始
         val intent = Intent(this, TimerService::class.java).apply {
@@ -92,7 +83,7 @@ class MainActivity :
         }
 
         binding.changeMinuteButton.setOnClickListener {
-            val dialog = NumPickerDialog.newInstance(mainTimer.timerMinute, mainTimer.timerSecond, "main")
+            val dialog = NumPickerDialog.newInstance(mainTimer.timerMinute, mainTimer.timerSecond, subTimer.timerMinute, subTimer.timerSecond)
             dialog.show(supportFragmentManager, "step")
         }
 
@@ -152,15 +143,24 @@ class MainActivity :
         this.unbindService(serviceConnection)
     }
 
-    override fun onDialogPositiveClick(minute: Int, second: Int, tag: String) {
-        mainTimer.timerMinute = minute
-        mainTimer.timerSecond = second
-        changeTimerText((minute*60+second)*1000L)
+    override fun onDialogPositiveClick(times: List<Int>, tag: String) {
+        mainTimer.timerMinute = times[0]
+        mainTimer.timerSecond = times[1]
+        subTimer.timerMinute = times[2]
+        subTimer.timerSecond = times[3]
+        changeTimerText((mainTimer.timerMinute*60+ mainTimer.timerSecond)*1000L)
 
-        if(mBound) mService.apply {
-            mainTimer.timerMinute = minute
-            mainTimer.timerSecond = second
-        }
+        if(mBound) mService.changeTimer(times)
+    }
+
+    private fun timerSetting(){
+        mainTimer = MyTimer(this, "main")
+        subTimer = MyTimer(this, "sub")
+        volumeControlStream = AudioManager.STREAM_MUSIC
+
+        subTimer.timerMinute = 1
+        subTimer.timerSecond = 0
+        changeTimerText(mainTimer.timerMinute*60*1000L)
     }
 
     private fun changeTimerText(time: Long){
@@ -231,6 +231,7 @@ class MainActivity :
 
     @Deprecated("Deprecated in Java")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
         if (resultCode == RESULT_OK) {
             when (requestCode) {
                 FileSelector.MENU_ID_FILE -> {
@@ -283,6 +284,5 @@ class MainActivity :
                 }
             }
         }
-        super.onActivityResult(requestCode, resultCode, data)
     }
 }

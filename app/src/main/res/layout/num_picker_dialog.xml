@@ -14,46 +14,124 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-        <androidx.cardview.widget.CardView
-            android:id="@+id/minutesCardView"
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/mainLayout"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent">
 
-            <NumberPicker
-                android:id="@+id/minutePicker"
+            <TextView
+                android:id="@+id/mainTextView"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center" />
+                android:text="main"
+                android:textSize="50sp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
 
-        </androidx.cardview.widget.CardView>
-
-        <TextView
-            android:id="@+id/unit"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text=" : "
-            android:textAlignment="center"
-            android:textSize="50sp"
-            app:layout_constraintBottom_toBottomOf="@+id/minutesCardView"
-            app:layout_constraintStart_toEndOf="@+id/minutesCardView"
-            app:layout_constraintTop_toTopOf="@+id/minutesCardView" />
-
-        <androidx.cardview.widget.CardView
-            android:id="@+id/secondCardView"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            app:layout_constraintStart_toEndOf="@+id/unit"
-            app:layout_constraintTop_toTopOf="parent">
-
-            <NumberPicker
-                android:id="@+id/secondPicker"
+            <TextView
+                android:id="@+id/mainUnit"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center" />
+                android:text=" : "
+                android:textAlignment="center"
+                android:textSize="50sp"
+                app:layout_constraintBottom_toBottomOf="@+id/mainMinutesCardView"
+                app:layout_constraintStart_toEndOf="@+id/mainMinutesCardView"
+                app:layout_constraintTop_toTopOf="@+id/mainMinutesCardView" />
 
-        </androidx.cardview.widget.CardView>
+            <androidx.cardview.widget.CardView
+                android:id="@+id/mainMinutesCardView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:layout_constraintStart_toEndOf="@+id/mainTextView"
+                app:layout_constraintTop_toTopOf="parent">
+
+                <NumberPicker
+                    android:id="@+id/mainMinutePicker"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center" />
+
+            </androidx.cardview.widget.CardView>
+
+            <androidx.cardview.widget.CardView
+                android:id="@+id/mainSecondCardView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:layout_constraintStart_toEndOf="@+id/mainUnit"
+                app:layout_constraintTop_toTopOf="parent">
+
+                <NumberPicker
+                    android:id="@+id/mainSecondPicker"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center" />
+
+            </androidx.cardview.widget.CardView>
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/subLayout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/mainLayout">
+
+            <TextView
+                android:id="@+id/subTextView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="sub"
+                android:textSize="50sp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <TextView
+                android:id="@+id/subUnit"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text=" : "
+                android:textAlignment="center"
+                android:textSize="50sp"
+                app:layout_constraintBottom_toBottomOf="@+id/subMinutesCardView"
+                app:layout_constraintStart_toEndOf="@+id/subMinutesCardView"
+                app:layout_constraintTop_toTopOf="@+id/subMinutesCardView" />
+
+            <androidx.cardview.widget.CardView
+                android:id="@+id/subMinutesCardView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:layout_constraintStart_toEndOf="@+id/subTextView"
+                app:layout_constraintTop_toTopOf="parent">
+
+                <NumberPicker
+                    android:id="@+id/subMinutePicker"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center" />
+
+            </androidx.cardview.widget.CardView>
+
+            <androidx.cardview.widget.CardView
+                android:id="@+id/subSecondCardView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:layout_constraintStart_toEndOf="@+id/subUnit"
+                app:layout_constraintTop_toTopOf="parent">
+
+                <NumberPicker
+                    android:id="@+id/subSecondPicker"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center" />
+
+            </androidx.cardview.widget.CardView>
+        </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

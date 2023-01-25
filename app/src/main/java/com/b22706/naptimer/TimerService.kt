@@ -5,20 +5,24 @@ import android.app.Notification
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
+import android.graphics.PixelFormat
 import android.media.MediaPlayer
 import android.os.Binder
 import android.os.IBinder
 import android.util.Log
+import android.view.Gravity
+import android.view.MotionEvent
+import android.view.WindowManager
 import android.widget.RemoteViews
 import androidx.lifecycle.MutableLiveData
 import java.io.File
 
 class TimerService: Service(), MyTimer.TimerListener {
     lateinit var app: Application
+    private lateinit var windowManager: WindowManager
     lateinit var mainTimer: MyTimer
     lateinit var subTimer: MyTimer
 
-    val startButtonText = MutableLiveData("スタート")
     var audioFile: File? = null
     var mediaPlayer = MediaPlayer()
     var timerRunning = false
@@ -39,6 +43,8 @@ class TimerService: Service(), MyTimer.TimerListener {
         Log.i("service", "onCreate")
         super.onCreate()
         app = application as Application
+        windowManager = applicationContext
+            .getSystemService(WINDOW_SERVICE) as WindowManager
 
         // アプリ起動時にチャンネル作成するほうがいい
         ForegroundServiceNotification.createNotificationChannel(applicationContext)
@@ -53,15 +59,16 @@ class TimerService: Service(), MyTimer.TimerListener {
                 if(intent.type == "text/plain"){
                     when(intent.getStringExtra("tag")){
                         "timer" ->{
-                            timerStart()
                             Log.i("service", "tag:start")
+                            timerStart()
                         }
                         "reset"->{
-                            timerReset()
                             Log.i("service", "tag:reset")
+                            timerReset()
                         }
                         "change"->{
-
+                            Log.i("service", "tag:change")
+                           //changeTimer()
                         }
                     }
                 }
@@ -96,12 +103,6 @@ class TimerService: Service(), MyTimer.TimerListener {
     @SuppressLint("RemoteViewLayout")
     private fun startServiceSetting(intent: Intent) {
         Log.i("service", "startServiceSetting")
-        val pendingIntent = PendingIntent.getActivity(
-            applicationContext,
-            intent.getIntExtra("REQUEST_CODE", 0),
-            intent,
-            PendingIntent.FLAG_IMMUTABLE
-        )
 
         //サービス通知から停止可能なボタン
         stopServicePendingIntent = PendingIntent.getBroadcast(
@@ -128,11 +129,6 @@ class TimerService: Service(), MyTimer.TimerListener {
                 action = Intent.ACTION_SEND
             }, PendingIntent.FLAG_IMMUTABLE)
 
-        // startForegroundServiceでサービス起動から5秒以内にstartForegroundして通知を表示しないとANRエラーになる
-        val notification: Notification = ForegroundServiceNotification.createServiceNotification(
-            applicationContext, pendingIntent, stopServicePendingIntent, "alarm"
-        )
-
         notificationUiChange(15,0, "start")
     }
 
@@ -149,7 +145,7 @@ class TimerService: Service(), MyTimer.TimerListener {
         }
     }
 
-    fun notificationUiChange(minute: Int, second: Int, timer: String){
+    private fun notificationUiChange(minute: Int, second: Int, timer: String){
         //Log.i("service", "notificationUiChange")
 
         val notificationLayout = RemoteViews(packageName, R.layout.notification_layout).apply {
@@ -187,6 +183,16 @@ class TimerService: Service(), MyTimer.TimerListener {
         }
     }
 
+    fun changeTimer(times: List<Int>){
+        mainTimer.change(times[0],times[1])
+        subTimer.change(times[2],times[3])
+
+        mainTimerMinute = times[0]
+        mainTimerSecond = times[1]
+
+        notificationUiChange(mainTimerMinute, mainTimerSecond, "start")
+    }
+
     private fun changeTimerView(time: Long){
         mainTimerMinute = (time/(60*1000)).toInt()
         mainTimerSecond = ((time/1000)%60).toInt()
@@ -203,7 +209,6 @@ class TimerService: Service(), MyTimer.TimerListener {
                 mainTimer.reset()
                 subTimer.start()
                 app.notificationMiniLayout.setTextViewText(R.id.timerButtonM,"アラーム停止")
-                //startButtonText.postValue("アラーム停止")
             }
             "sub" -> {
                 timerRunning = true
@@ -212,7 +217,6 @@ class TimerService: Service(), MyTimer.TimerListener {
                 subTimer.reset()
                 mainTimer.start()
                 app.notificationMiniLayout.setTextViewText(R.id.timerButtonM,"一時停止")
-                //startButtonText.postValue("一時停止")
             }
         }
     }
@@ -224,7 +228,6 @@ class TimerService: Service(), MyTimer.TimerListener {
                 mainTimer.start()
                 app.notificationMiniLayout.setTextViewText(R.id.timerButtonM, "stop")
                 timerRunning = true
-                //startButtonText.postValue("一時停止")
             }
             subTimer.getTimerRunning() -> {
                 Log.i("service", "timerStart-subTimer")
@@ -236,7 +239,6 @@ class TimerService: Service(), MyTimer.TimerListener {
                 timerRunning = true
                 notificationUiChange(mainTimerMinute, mainTimerSecond, "restart")
                 app.notificationMiniLayout.setTextViewText(R.id.timerButtonM, "restart")
-                //startButtonText.postValue("一時停止")
             }
             mainTimer.getTimerRunning() -> {
                 Log.i("service", "timerStart-mainTimer")
@@ -244,7 +246,6 @@ class TimerService: Service(), MyTimer.TimerListener {
                 timerRunning = false
                 notificationUiChange(mainTimerMinute, mainTimerSecond, "start")
                 app.notificationMiniLayout.setTextViewText(R.id.timerButtonM, "start")
-                //startButtonText.postValue("再開")
             }
         }
     }
@@ -252,9 +253,47 @@ class TimerService: Service(), MyTimer.TimerListener {
     fun timerReset() {
         mainTimer.reset()
         subTimer.reset()
-        timerRunning = true
-        changeTimerView(mainTimer.timerMinute * 60 * 1000L)
-        app.notificationMiniLayout.setTextViewText(R.id.timerButtonM, "スタート")
-        //startButtonText.postValue("スタート")
+        timerRunning = false
+
+        notificationUiChange(mainTimerMinute, mainTimerSecond, "start")
+    }
+
+    fun changeTimer(){
+        val intent = Intent(this, NumPickerDialogActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP //新規起動の記述
+        application.startActivity(intent)
+
+        val typeLayer = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+
+        val params = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            typeLayer, WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                    or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+            PixelFormat.TRANSLUCENT
+        )
+//        // dpを取得
+//        val dpScale = resources.displayMetrics.density.toInt()
+//        // 右上に配置
+//        params.gravity = Gravity.TOP or Gravity.END
+//        params.x = 20 * dpScale // 20dp
+//        params.y = 80 * dpScale // 80dp
+
+//        // ViewにTouchListenerを設定する
+//        newView.setOnTouchListener { _, event ->
+//            Log.d("debug", "onTouch")
+//            if (event.action == MotionEvent.ACTION_DOWN) {
+//                newView.performClick()
+//
+//                // Serviceを停止
+//                stopSelf()
+//            }
+//            false
+//        }
+//
+//        // Viewを画面上に追加
+//        windowManager.addView(, params)
+
+//        windowManager.removeView()
     }
 }

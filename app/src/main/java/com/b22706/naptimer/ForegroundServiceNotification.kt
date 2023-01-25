@@ -33,7 +33,7 @@ internal object ForegroundServiceNotification {
         val notificationChannel = NotificationChannel(
             CHANNEL_ID,
             CHANNEL_NAME,
-            NotificationManager.IMPORTANCE_HIGH
+            NotificationManager.IMPORTANCE_LOW
         )
         // 重要度ごとの違い
         // https://developer.android.com/training/notify-user/channels#importance
@@ -62,12 +62,10 @@ internal object ForegroundServiceNotification {
         notificationLayoutExpanded: RemoteViews
     ): Notification =
         NotificationCompat.Builder(context, CHANNEL_ID).apply {
-            setSmallIcon(R.drawable.ic_launcher_background)
+            setSmallIcon(R.drawable.ic_launcher_foreground)
             setStyle(NotificationCompat.DecoratedCustomViewStyle())
             setCustomContentView(notificationLayout)
             setCustomBigContentView(notificationLayoutExpanded)
             //setCustomHeadsUpContentView(notificationLayoutExpanded)
-            //setContentIntent(pendingIntent)
-            //addAction(R.drawable.ic_launcher_foreground, "停止する", sendPendingIntent)
         }.build()
 }
