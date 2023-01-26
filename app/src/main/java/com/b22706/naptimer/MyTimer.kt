@@ -8,17 +8,15 @@ class MyTimer(val listener: TimerListener, val tag: String) {
     private var timerRunning = false
     fun getTimerRunning() = timerRunning
 
-    var timerMinute = 15
-    var timerSecond = 0
-    var progressTime = (timerMinute*60+timerSecond)*1000L
-    val progressTimeL = MutableLiveData((timerMinute*60+timerSecond)*1000L)
+    var minute = 15
+    var second = 0
+    val progressTime = MutableLiveData((minute*60+second)*1000L)
 
     fun start(){
         if(timerRunning) return
-        timer = object : CountDownTimer(progressTime, 1000){
+        timer = object : CountDownTimer(progressTime.value!!, 1000){
             override fun onTick(time: Long) {
-                progressTime = time
-                progressTimeL.postValue(time)
+                progressTime.postValue(time)
                 listener.onTimerTick(time, tag)
             }
 
@@ -41,15 +39,13 @@ class MyTimer(val listener: TimerListener, val tag: String) {
             timer.cancel()
             timerRunning = false
         }
-        progressTime = (timerMinute*60+timerSecond)*1000L
-        progressTimeL.postValue((timerMinute*60+timerSecond)*1000L)
+        progressTime.postValue((minute*60+second)*1000L)
     }
 
     fun change(min: Int, sec:Int){
-        timerMinute = min
-        timerSecond = sec
-        progressTime = (timerMinute*60+timerSecond)*1000L
-        progressTimeL.postValue((timerMinute*60+timerSecond)*1000L)
+        minute = min
+        second = sec
+        progressTime.postValue((minute*60+second)*1000L)
     }
 
     interface TimerListener{

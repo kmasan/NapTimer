@@ -13,6 +13,7 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.IBinder
 import android.provider.OpenableColumns
+import android.util.Log
 import android.widget.Toast
 import com.b22706.naptimer.UriToFileUtil.toFile
 import com.b22706.naptimer.databinding.ActivityMainBinding
@@ -21,19 +22,15 @@ import java.io.File
 class MainActivity :
     AppCompatActivity(),
     NumPickerDialog.TimerChangeDialogListener,
-    FileSelectionDialog.OnFileSelectListener,
-    MyTimer.TimerListener
+    FileSelectionDialog.OnFileSelectListener
 {
     private lateinit var binding:ActivityMainBinding
     private lateinit var fileSelector: FileSelector
     private lateinit var mService: TimerService
     private var mBound: Boolean = false
-    private lateinit var mainTimer: MyTimer
-    private lateinit var subTimer: MyTimer
 
     private var audioFile: File? = null
     private var mediaPlayer = MediaPlayer()
-    private var mainTimerRunning = true
 
     private val serviceConnection: ServiceConnection = object : ServiceConnection {
         @SuppressLint("SetTextI18n")
@@ -46,10 +43,10 @@ class MainActivity :
             mBound = true
 
             mService.apply {
-                mainTimer.progressTimeL.observe(this@MainActivity){
+                mainTimer.progressTime.observe(this@MainActivity){
                     changeTimerText(it)
                 }
-                subTimer.progressTimeL.observe(this@MainActivity){
+                subTimer.progressTime.observe(this@MainActivity){
 
                 }
             }
@@ -68,7 +65,7 @@ class MainActivity :
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         fileSelector = FileSelector(this,this)
-        timerSetting()
+        volumeControlStream = AudioManager.STREAM_MUSIC
 
         // Serviceの開始
         val intent = Intent(this, TimerService::class.java).apply {
@@ -83,46 +80,63 @@ class MainActivity :
         }
 
         binding.changeMinuteButton.setOnClickListener {
-            val dialog = NumPickerDialog.newInstance(mainTimer.timerMinute, mainTimer.timerSecond, subTimer.timerMinute, subTimer.timerSecond)
+            if (!mBound) return@setOnClickListener
+            val dialog = NumPickerDialog.newInstance(
+                mService.mainTimer.minute,
+                mService.mainTimer.second,
+                mService.subTimer.minute,
+                mService.subTimer.second
+            )
             dialog.show(supportFragmentManager, "step")
         }
 
         binding.startButton.setOnClickListener {
-            when {
-                mainTimer.getTimerRunning() -> {
-                    mainTimer.stop()
-                    binding.startButton.text = "再開"
-                }
-                subTimer.getTimerRunning() -> {
-                    mediaPlayer.stop()
-                    mediaPlayer.prepare()
-                    subTimer.reset()
-                    mainTimer.start()
-                    mainTimerRunning = true
-                    binding.startButton.text = "一時停止"
-                }
-                else -> {
-                    if(mainTimerRunning){
-                        mainTimer.start()
-                        binding.startButton.text = "一時停止"
-                    }
-                }
-            }
+//            when {
+//                mainTimer.getTimerRunning() -> {
+//                    mainTimer.stop()
+//                    binding.startButton.text = "再開"
+//                }
+//                subTimer.getTimerRunning() -> {
+//                    mediaPlayer.stop()
+//                    mediaPlayer.prepare()
+//                    subTimer.reset()
+//                    mainTimer.start()
+//                    mainTimerRunning = true
+//                    binding.startButton.text = "一時停止"
+//                }
+//                else -> {
+//                    if(mainTimerRunning){
+//                        mainTimer.start()
+//                        binding.startButton.text = "一時停止"
+//                    }
+//                }
+//            }
 
-            if(mBound) mService.timerStart()
+            if(mBound) {
+                binding.startButton.text =when{
+                    mService.mainTimer.getTimerRunning()->"再開"
+                    else->"一時停止"
+                }
+                mService.timerStart()
+            }
         }
         binding.resetButton.setOnClickListener {
-            mainTimer.reset()
-            subTimer.reset()
-            mainTimerRunning = true
-            changeTimerText(mainTimer.timerMinute*60*1000L)
+//            mainTimer.reset()
+//            subTimer.reset()
+//            mainTimerRunning = true
+//            changeTimerText(mainTimer.minute*60*1000L)
             binding.startButton.text = "スタート"
 
             if(mBound) mService.timerReset()
         }
 
         binding.fileSelectButton.setOnClickListener {
-            fileSelector.selectFile()
+            //fileSelector.selectFile("*/*")
+            val fileSelectorIntent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "audio/*"
+            }
+            startActivityForResult(fileSelectorIntent, 0)
         }
 
         mediaPlayer.setOnCompletionListener {
@@ -144,23 +158,13 @@ class MainActivity :
     }
 
     override fun onDialogPositiveClick(times: List<Int>, tag: String) {
-        mainTimer.timerMinute = times[0]
-        mainTimer.timerSecond = times[1]
-        subTimer.timerMinute = times[2]
-        subTimer.timerSecond = times[3]
-        changeTimerText((mainTimer.timerMinute*60+ mainTimer.timerSecond)*1000L)
+//        mainTimer.minute = times[0]
+//        mainTimer.second = times[1]
+//        subTimer.minute = times[2]
+//        subTimer.second = times[3]
+//        changeTimerText((mainTimer.minute*60+ mainTimer.second)*1000L)
 
         if(mBound) mService.changeTimer(times)
-    }
-
-    private fun timerSetting(){
-        mainTimer = MyTimer(this, "main")
-        subTimer = MyTimer(this, "sub")
-        volumeControlStream = AudioManager.STREAM_MUSIC
-
-        subTimer.timerMinute = 1
-        subTimer.timerSecond = 0
-        changeTimerText(mainTimer.timerMinute*60*1000L)
     }
 
     private fun changeTimerText(time: Long){
@@ -170,35 +174,28 @@ class MainActivity :
         binding.secText.text = String.format("%02d", second)
     }
 
-    override fun onTimerTick(time: Long, tag:String) {
-        when(tag){
-            "main" -> {
-                changeTimerText(time)
-            }
-        }
-    }
-
-    override fun onTimerFinish(tag:String) {
-        when(tag){
-            "main" -> {
-                mainTimerRunning = false
-                mediaPlayer.start()
-                mainTimer.reset()
-                subTimer.start()
-                binding.startButton.text = "アラーム停止"
-            }
-            "sub" -> {
-                mainTimerRunning = true
-                mediaPlayer.stop()
-                mediaPlayer.prepare()
-                subTimer.reset()
-                mainTimer.start()
-                binding.startButton.text = "一時停止"
-            }
-        }
-    }
+//    override fun onTimerFinish(tag:String) {
+//        when(tag){
+//            "main" -> {
+////                mainTimerRunning = false
+//                mediaPlayer.start()
+////                mainTimer.reset()
+////                subTimer.start()
+//                binding.startButton.text = "アラーム停止"
+//            }
+//            "sub" -> {
+////                mainTimerRunning = true
+//                mediaPlayer.stop()
+//                mediaPlayer.prepare()
+////                subTimer.reset()
+////                mainTimer.start()
+//                binding.startButton.text = "一時停止"
+//            }
+//        }
+//    }
 
     override fun onFileSelect(file: File?) {
+        Log.i("MainActivity","onFileSelect")
         Toast.makeText(
             this,
             "API:" + Build.VERSION.SDK_INT + " ファイルが選択されました。\n : " + file!!.path,
@@ -207,9 +204,10 @@ class MainActivity :
         audioFile = file
         binding.fileNameText.text = file.name
 
-        mediaPlayer.apply {
-            stop()
-            reset()
+        if(mediaPlayer.isPlaying){
+            // アラームの停止
+            mediaPlayer.stop()
+            mediaPlayer.reset()
         }
         mediaPlayer.setDataSource(file.path)
         mediaPlayer.prepare()
@@ -218,9 +216,10 @@ class MainActivity :
         if(mBound){
             mService.apply {
                 audioFile = file
-                mediaPlayer.apply {
-                    stop()
-                    reset()
+                if(mediaPlayer.isPlaying){
+                    // アラームの停止
+                    mediaPlayer.stop()
+                    mediaPlayer.reset()
                 }
                 mediaPlayer.setDataSource(file.path)
                 mediaPlayer.prepare()
@@ -232,6 +231,7 @@ class MainActivity :
     @Deprecated("Deprecated in Java")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        Log.i("MainActivity","onActivityResult")
         if (resultCode == RESULT_OK) {
             when (requestCode) {
                 FileSelector.MENU_ID_FILE -> {

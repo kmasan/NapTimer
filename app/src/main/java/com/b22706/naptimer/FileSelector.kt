@@ -14,7 +14,7 @@ class FileSelector(private val appContext: Context, private val listener: FileSe
     private lateinit var m_strInitialDir: File       // 初期フォルダ
 
     // ファイルを選択するダイアログを表示する
-    fun selectFile() {
+    fun selectFile(fType: String) {
         //外部ストレージ　ルートフォルダパス取得
         val externalFilesDirs =
             appContext.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)!!.path.split("/")
@@ -41,8 +41,10 @@ class FileSelector(private val appContext: Context, private val listener: FileSe
             dlg.show(m_strInitialDir)
         } else {
             // ファイル選択Activity表示　Android 9.0　(API 28)　を超えるの場合の処理
-            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
-            intent.type = "*/*"
+            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = fType
+            }
             appContext.startActivity(intent)
         }
     }

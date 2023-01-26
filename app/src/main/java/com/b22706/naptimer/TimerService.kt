@@ -1,7 +1,5 @@
 package com.b22706.naptimer
 
-import android.annotation.SuppressLint
-import android.app.Notification
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
@@ -10,11 +8,8 @@ import android.media.MediaPlayer
 import android.os.Binder
 import android.os.IBinder
 import android.util.Log
-import android.view.Gravity
-import android.view.MotionEvent
 import android.view.WindowManager
 import android.widget.RemoteViews
-import androidx.lifecycle.MutableLiveData
 import java.io.File
 
 class TimerService: Service(), MyTimer.TimerListener {
@@ -24,15 +19,13 @@ class TimerService: Service(), MyTimer.TimerListener {
     lateinit var subTimer: MyTimer
 
     var audioFile: File? = null
-    var mediaPlayer = MediaPlayer()
+    val mediaPlayer = MediaPlayer()
     var timerRunning = false
 
     lateinit var stopServicePendingIntent: PendingIntent
     lateinit var timerPendingIntent: PendingIntent
     lateinit var resetTimerPendingIntent: PendingIntent
     lateinit var changeTimePendingIntent: PendingIntent
-    var mainTimerMinute = 15
-    var mainTimerSecond = 0
 
     private val binder = ServiceBinder()
     inner class ServiceBinder : Binder(){
@@ -75,7 +68,6 @@ class TimerService: Service(), MyTimer.TimerListener {
             }
             else -> {
                 startServiceSetting(intent)
-                startTimerSetting()
             }
         }
         return START_NOT_STICKY
@@ -100,9 +92,21 @@ class TimerService: Service(), MyTimer.TimerListener {
     }
 
     // フォラグランドサービスの開始
-    @SuppressLint("RemoteViewLayout")
     private fun startServiceSetting(intent: Intent) {
-        Log.i("service", "startServiceSetting")
+        // Log.i("service", "startServiceSetting")
+
+        // Timerの設定
+        mainTimer = MyTimer(this, "main")
+        subTimer = MyTimer(this, "sub")
+        subTimer.change(1,0)
+
+        // アラームの再生が完了した際の処理
+        mediaPlayer.setOnCompletionListener {
+            if(!mediaPlayer.isLooping){
+                mediaPlayer.stop()
+                mediaPlayer.prepare()
+            }
+        }
 
         //サービス通知から停止可能なボタン
         stopServicePendingIntent = PendingIntent.getBroadcast(
@@ -114,35 +118,26 @@ class TimerService: Service(), MyTimer.TimerListener {
             PendingIntent.FLAG_IMMUTABLE
         )
 
+        // Timerの開始・停止用
         timerPendingIntent = PendingIntent.getBroadcast(this, 1,
             Intent(this, TimerBroadcastReceiver::class.java).apply {
                 action = Intent.ACTION_SEND
             }, PendingIntent.FLAG_IMMUTABLE)
 
+        // Timerのリセットボタン用
         resetTimerPendingIntent = PendingIntent.getBroadcast(this, 2,
             Intent(this, ResetTimerBroadcastReceiver::class.java).apply {
                 action = Intent.ACTION_SEND
             }, PendingIntent.FLAG_IMMUTABLE)
 
+        // Timerの時間変更用
         changeTimePendingIntent = PendingIntent.getBroadcast(this, 3,
             Intent(this, ChangeTimeBroadcastReceiver::class.java).apply {
                 action = Intent.ACTION_SEND
             }, PendingIntent.FLAG_IMMUTABLE)
 
+        // 初期状態の通知を設定
         notificationUiChange(15,0, "start")
-    }
-
-    private fun startTimerSetting(){
-        mainTimer = MyTimer(this, "main")
-        subTimer = MyTimer(this, "sub")
-        subTimer.change(1,0)
-
-        mediaPlayer.setOnCompletionListener {
-            if(!mediaPlayer.isLooping){
-                mediaPlayer.stop()
-                mediaPlayer.prepare()
-            }
-        }
     }
 
     private fun notificationUiChange(minute: Int, second: Int, timer: String){
@@ -178,7 +173,7 @@ class TimerService: Service(), MyTimer.TimerListener {
         //Log.i("service", "onTimerTick:${time}-${tag}")
         when(tag){
             "main" -> {
-                changeTimerView(time)
+                changeTimerView(time, "stop")
             }
         }
     }
@@ -187,78 +182,90 @@ class TimerService: Service(), MyTimer.TimerListener {
         mainTimer.change(times[0],times[1])
         subTimer.change(times[2],times[3])
 
-        mainTimerMinute = times[0]
-        mainTimerSecond = times[1]
-
-        notificationUiChange(mainTimerMinute, mainTimerSecond, "start")
+        notificationUiChange(mainTimer.minute, mainTimer.second, "start")
     }
 
-    private fun changeTimerView(time: Long){
-        mainTimerMinute = (time/(60*1000)).toInt()
-        mainTimerSecond = ((time/1000)%60).toInt()
+    private fun changeTimerView(time: Long, string: String){
+        val minute = (time/(60*1000)).toInt()
+        val second = ((time/1000)%60).toInt()
 
-        notificationUiChange(mainTimerMinute, mainTimerSecond, "stop")
+        notificationUiChange(minute, second, string)
     }
 
+    // Timer終了時
     override fun onTimerFinish(tag: String) {
         Log.i("service", "onTimerFinish")
         when(tag){
             "main" -> {
-                timerRunning = false
-                //mediaPlayer.start()
+                // アラームを再生しSubTimerを開始
+                mediaPlayer.start()
                 mainTimer.reset()
                 subTimer.start()
-                app.notificationMiniLayout.setTextViewText(R.id.timerButtonM,"アラーム停止")
+                changeTimerView(0,  "alarm stop")
             }
             "sub" -> {
-                timerRunning = true
-                //mediaPlayer.stop()
-                //mediaPlayer.prepare()
+                // アラームを停止しMainTimerを開始
+                mediaPlayer.stop()
+                mediaPlayer.prepare()
                 subTimer.reset()
                 mainTimer.start()
-                app.notificationMiniLayout.setTextViewText(R.id.timerButtonM,"一時停止")
+                notificationUiChange(mainTimer.minute, mainTimer.second, "stop")
             }
         }
     }
 
+    // Timerの開始・停止
     fun timerStart(){
         when {
+            // Timer停止時
             !timerRunning -> {
                 Log.i("service", "timerStart-timerRunning")
+                // MainTimerを開始
                 mainTimer.start()
-                app.notificationMiniLayout.setTextViewText(R.id.timerButtonM, "stop")
                 timerRunning = true
             }
+            // SubTimer稼働時
             subTimer.getTimerRunning() -> {
                 Log.i("service", "timerStart-subTimer")
-                //mediaPlayer.stop()
-                //mediaPlayer.prepare()
+                // アラームの停止
+                mediaPlayer.stop()
+                mediaPlayer.prepare()
+
+                // SubTimerをリセットしMainTimerを開始
                 subTimer.reset()
                 mainTimer.reset()
                 mainTimer.start()
                 timerRunning = true
-                notificationUiChange(mainTimerMinute, mainTimerSecond, "restart")
-                app.notificationMiniLayout.setTextViewText(R.id.timerButtonM, "restart")
+                notificationUiChange(mainTimer.minute, mainTimer.second, "stop")
             }
+            // MainTimer稼働時
             mainTimer.getTimerRunning() -> {
                 Log.i("service", "timerStart-mainTimer")
+                // MainTimerを停止
                 mainTimer.stop()
                 timerRunning = false
-                notificationUiChange(mainTimerMinute, mainTimerSecond, "start")
-                app.notificationMiniLayout.setTextViewText(R.id.timerButtonM, "start")
+                changeTimerView(mainTimer.progressTime.value!!, "start")
             }
         }
     }
 
+    // Timerをリセット
     fun timerReset() {
+        if(mediaPlayer.isPlaying){
+            // アラームの停止
+            mediaPlayer.stop()
+            mediaPlayer.prepare()
+        }
+
         mainTimer.reset()
         subTimer.reset()
         timerRunning = false
 
-        notificationUiChange(mainTimerMinute, mainTimerSecond, "start")
+        notificationUiChange(mainTimer.minute, mainTimer.second, "start")
     }
 
-    fun changeTimer(){
+    // serviceからTimerを変更
+    private fun changeTimer(){
         val intent = Intent(this, NumPickerDialogActivity::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP //新規起動の記述
         application.startActivity(intent)

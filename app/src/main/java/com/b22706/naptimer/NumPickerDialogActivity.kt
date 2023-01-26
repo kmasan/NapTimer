@@ -12,7 +12,7 @@ class NumPickerDialogActivity: AppCompatActivity(),
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d("dialogActivity", "onCreate")
-        //val dialog = NumPickerDialog.newInstance(mainTimer.timerMinute, mainTimer.timerSecond, "main")
+        //val dialog = NumPickerDialog.newInstance(mainTimer.minute, mainTimer.second, "main")
         val dialog = NumPickerDialog.newInstance(0, 0, 0,0)
         dialog.show(supportFragmentManager, "step")
         val alertDialog = AlertDialog.Builder(this).apply {
