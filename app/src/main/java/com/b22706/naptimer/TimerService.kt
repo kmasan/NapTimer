@@ -1,5 +1,6 @@
 package com.b22706.naptimer
 
+import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
@@ -15,6 +16,7 @@ import java.io.File
 class TimerService: Service(), MyTimer.TimerListener {
     lateinit var app: Application
     private lateinit var windowManager: WindowManager
+    private lateinit var notificationManager: NotificationManager
     lateinit var mainTimer: MyTimer
     lateinit var subTimer: MyTimer
 
@@ -22,10 +24,8 @@ class TimerService: Service(), MyTimer.TimerListener {
     val mediaPlayer = MediaPlayer()
     var timerRunning = false
 
-    lateinit var stopServicePendingIntent: PendingIntent
-    lateinit var timerPendingIntent: PendingIntent
-    lateinit var resetTimerPendingIntent: PendingIntent
-    lateinit var changeTimePendingIntent: PendingIntent
+    lateinit var notificationLayout: RemoteViews
+    lateinit var notificationMiniLayout: RemoteViews
 
     private val binder = ServiceBinder()
     inner class ServiceBinder : Binder(){
@@ -40,7 +40,7 @@ class TimerService: Service(), MyTimer.TimerListener {
             .getSystemService(WINDOW_SERVICE) as WindowManager
 
         // アプリ起動時にチャンネル作成するほうがいい
-        ForegroundServiceNotification.createNotificationChannel(applicationContext)
+        notificationManager = ForegroundServiceNotification.createNotificationChannel(applicationContext)
     }
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
@@ -109,7 +109,7 @@ class TimerService: Service(), MyTimer.TimerListener {
         }
 
         //サービス通知から停止可能なボタン
-        stopServicePendingIntent = PendingIntent.getBroadcast(
+        val stopServicePendingIntent = PendingIntent.getBroadcast(
             this,
             0,
             Intent(this, StopServiceBroadcastReceiver::class.java).apply {
@@ -119,43 +119,37 @@ class TimerService: Service(), MyTimer.TimerListener {
         )
 
         // Timerの開始・停止用
-        timerPendingIntent = PendingIntent.getBroadcast(this, 1,
+        val timerPendingIntent = PendingIntent.getBroadcast(this, 1,
             Intent(this, TimerBroadcastReceiver::class.java).apply {
                 action = Intent.ACTION_SEND
             }, PendingIntent.FLAG_IMMUTABLE)
 
         // Timerのリセットボタン用
-        resetTimerPendingIntent = PendingIntent.getBroadcast(this, 2,
+        val resetTimerPendingIntent = PendingIntent.getBroadcast(this, 2,
             Intent(this, ResetTimerBroadcastReceiver::class.java).apply {
                 action = Intent.ACTION_SEND
             }, PendingIntent.FLAG_IMMUTABLE)
 
         // Timerの時間変更用
-        changeTimePendingIntent = PendingIntent.getBroadcast(this, 3,
+        val changeTimePendingIntent = PendingIntent.getBroadcast(this, 3,
             Intent(this, ChangeTimeBroadcastReceiver::class.java).apply {
                 action = Intent.ACTION_SEND
             }, PendingIntent.FLAG_IMMUTABLE)
 
         // 初期状態の通知を設定
-        notificationUiChange(15,0, "start")
-    }
-
-    private fun notificationUiChange(minute: Int, second: Int, timer: String){
-        //Log.i("service", "notificationUiChange")
-
-        val notificationLayout = RemoteViews(packageName, R.layout.notification_layout).apply {
-            setTextViewText(R.id.muniteView,String.format("%02d", minute))
-            setTextViewText(R.id.secondView,String.format("%02d", second))
-            setTextViewText(R.id.timerButton,timer)
+        notificationLayout = RemoteViews(packageName, R.layout.notification_layout).apply {
+            setTextViewText(R.id.muniteView,String.format("%02d", 15))
+            setTextViewText(R.id.secondView,String.format("%02d", 0))
+            setTextViewText(R.id.timerButton,"start")
             setOnClickPendingIntent(R.id.timerButton, timerPendingIntent)
             setOnClickPendingIntent(R.id.resetButton, resetTimerPendingIntent)
             setOnClickPendingIntent(R.id.timeChangeButton, changeTimePendingIntent)
             setOnClickPendingIntent(R.id.stopServiceButton, stopServicePendingIntent)
         }
-        val notificationMiniLayout = RemoteViews(packageName, R.layout.notification_mini_layout).apply {
-            setTextViewText(R.id.muniteViewM,String.format("%02d", minute))
-            setTextViewText(R.id.secondViewM,String.format("%02d", second))
-            setTextViewText(R.id.timerButtonM,timer)
+        notificationMiniLayout = RemoteViews(packageName, R.layout.notification_mini_layout).apply {
+            setTextViewText(R.id.muniteViewM,String.format("%02d", 15))
+            setTextViewText(R.id.secondViewM,String.format("%02d", 0))
+            setTextViewText(R.id.timerButtonM,"start")
             setOnClickPendingIntent(R.id.timerButtonM, timerPendingIntent)
             setOnClickPendingIntent(R.id.resetButtonM, resetTimerPendingIntent)
         }
@@ -164,6 +158,29 @@ class TimerService: Service(), MyTimer.TimerListener {
         )
 
         startForeground(
+            ForegroundServiceNotification.FOREGROUND_SERVICE_NOTIFICATION_ID,
+            customNotification
+        )
+    }
+
+    private fun notificationUiChange(minute: Int, second: Int, timer: String){
+        //Log.i("service", "notificationUiChange")
+
+        notificationLayout.apply {
+            setTextViewText(R.id.muniteView,String.format("%02d", minute))
+            setTextViewText(R.id.secondView,String.format("%02d", second))
+            setTextViewText(R.id.timerButton,timer)
+        }
+        notificationMiniLayout.apply {
+            setTextViewText(R.id.muniteViewM,String.format("%02d", minute))
+            setTextViewText(R.id.secondViewM,String.format("%02d", second))
+            setTextViewText(R.id.timerButtonM,timer)
+        }
+        val customNotification = ForegroundServiceNotification.createCustomNotification(
+            applicationContext, notificationMiniLayout, notificationLayout
+        )
+
+        notificationManager.notify(
             ForegroundServiceNotification.FOREGROUND_SERVICE_NOTIFICATION_ID,
             customNotification
         )

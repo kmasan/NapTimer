@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
+import android.graphics.Color
 import android.view.View
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
@@ -16,14 +17,14 @@ internal object ForegroundServiceNotification {
     const val FOREGROUND_SERVICE_NOTIFICATION_ID: Int = 100
     private const val CHANNEL_ID = "channel_id"
     private const val CHANNEL_NAME = R.string.app_name.toString()
-    fun createNotificationChannel(context: Context) {
+    fun createNotificationChannel(context: Context): NotificationManager {
         // 通知チャネルの作成と管理
         // https://developer.android.com/training/notify-user/channels
 
         // Android 8.0 以降、すべての通知をチャンネルに割り当てる必要がある
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (manager.getNotificationChannel(CHANNEL_ID) != null) {
-            return  //すでに作成済みの場合など
+            return manager //すでに作成済みの場合など
         }
 
         // Foreground Service の通知の場合、IMPORTANCE_MIN は非推奨
@@ -34,12 +35,17 @@ internal object ForegroundServiceNotification {
             CHANNEL_ID,
             CHANNEL_NAME,
             NotificationManager.IMPORTANCE_LOW
-        )
+        ).apply {
+            enableLights(false)
+            enableVibration(false)
+        }
         // 重要度ごとの違い
         // https://developer.android.com/training/notify-user/channels#importance
 
         //すでに指定したチャンネルが作成済みの場合、何も起きない
         manager.createNotificationChannel(notificationChannel)
+
+        return manager
     }
 
     fun createServiceNotification(
